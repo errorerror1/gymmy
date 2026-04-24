@@ -142,6 +142,7 @@ export default function LogScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
         ref={feedRef}
+        style={styles.list}
         data={sortedLogs}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
@@ -420,6 +421,9 @@ const getStyles = (colors: ThemeColors) =>
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    list: {
+      flex: 1,
     },
     listContent: {
       paddingBottom: 60,

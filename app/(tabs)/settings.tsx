@@ -5,7 +5,7 @@
 // in-memory switch); every other setting goes through src/lib/storage.ts.
 
 import { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Alert, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Alert, Platform, ScrollView } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Unit, DarkMode, AppSettings } from '../../src/lib/types';
@@ -133,9 +133,14 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <GText style={styles.title}>Settings</GText>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <GText style={styles.title}>Settings</GText>
 
-      <View style={styles.section}>
+        <View style={styles.section}>
         <GText style={styles.sectionTitle}>Units</GText>
         <View style={styles.toggle}>
           <Pressable
@@ -197,9 +202,10 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.footer}>
-        <GText style={styles.footerText}>GymTracker v1.0</GText>
-      </View>
+        <View style={styles.footer}>
+          <GText style={styles.footerText}>GymTracker v1.0</GText>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -208,8 +214,14 @@ const getStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      padding: 24,
       backgroundColor: colors.background,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 24,
+      flexGrow: 1,
     },
     title: {
       fontSize: 34,
