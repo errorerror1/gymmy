@@ -162,14 +162,16 @@ export default function TrainScreen() {
         </View>
       </View>
       <ScrollView
+        style={styles.pager}
         horizontal
         pagingEnabled
         scrollEnabled={!tmDragLocked}
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(e) => {
+        onScroll={(e) => {
           const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-          setCurrentIndex(page);
+          if (page !== currentIndex) setCurrentIndex(page);
         }}
+        scrollEventThrottle={16}
         decelerationRate="fast"
       >
         {LIFTS.map((lift) => (
@@ -302,7 +304,11 @@ const getStyles = (colors: ThemeColors) =>
       flex: 1,
       backgroundColor: colors.background,
     },
+    pager: {
+      flex: 1,
+    },
     pageWrapper: {
+      flex: 1,
       width: SCREEN_WIDTH,
     },
     page: {
