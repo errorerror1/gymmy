@@ -19,7 +19,7 @@ import {
   RobotoCondensed_500Medium,
   RobotoCondensed_700Bold,
 } from '@expo-google-fonts/roboto-condensed';
-import { ThemeProvider } from '../src/lib/theme';
+import { ThemeProvider, useThemeMode } from '../src/lib/theme';
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -40,19 +40,22 @@ export default function RootLayout() {
       document.head.appendChild(link);
     }
 
-    // Theme color
-    let metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-    if (!metaTheme) {
-      metaTheme = document.createElement('meta');
-      metaTheme.name = 'theme-color';
-      document.head.appendChild(metaTheme);
+    // Viewport — must include viewport-fit=cover so env(safe-area-inset-top)
+    // reports the real iPhone status bar height in PWA standalone mode.
+    let viewport = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
+    if (!viewport) {
+      viewport = document.createElement('meta');
+      viewport.name = 'viewport';
+      document.head.appendChild(viewport);
     }
-    metaTheme.content = '#8B7355';
+    viewport.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
 
-    // Apple PWA meta tags
+    // Apple PWA meta tags. `black-translucent` makes the iOS status bar
+    // transparent so the app's own background (dark or light) shows through,
+    // instead of the default white strip.
     const appleMeta = [
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
-      { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+      { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       { name: 'apple-mobile-web-app-title', content: 'GymTracker' },
     ];
     appleMeta.forEach(({ name, content }) => {
@@ -80,6 +83,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
+        <MetaTags />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
@@ -90,4 +94,22 @@ export default function RootLayout() {
       </ThemeProvider>
     </SafeAreaProvider>
   );
+}
+
+// Keeps <meta name="theme-color"> in sync with the active theme so Safari
+// chrome and PWA headers pick up the real background instead of a fixed
+// brown. Must live inside ThemeProvider to read the resolved theme.
+function MetaTags() {
+  const { resolved } = useThemeMode();
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    let metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!metaTheme) {
+      metaTheme = document.createElement('meta');
+      metaTheme.name = 'theme-color';
+      document.head.appendChild(metaTheme);
+    }
+    metaTheme.content = resolved === 'dark' ? '#0F0F0F' : '#F5F5F5';
+  }, [resolved]);
+  return null;
 }

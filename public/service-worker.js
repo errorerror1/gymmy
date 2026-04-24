@@ -16,7 +16,7 @@
 // worker, activates it (skipWaiting + clients.claim below), and the
 // "activate" handler deletes the previous cache in one shot.
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_NAME = `gymtracker-${CACHE_VERSION}`;
 
 self.addEventListener('install', (event) => {
