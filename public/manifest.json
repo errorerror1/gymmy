@@ -1,6 +1,6 @@
 {
-  "name": "GymTracker",
-  "short_name": "GymTracker",
+  "name": "Gymmy",
+  "short_name": "Gymmy",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#F5F5F5",

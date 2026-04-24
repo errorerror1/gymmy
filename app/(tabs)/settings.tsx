@@ -5,7 +5,7 @@
 // in-memory switch); every other setting goes through src/lib/storage.ts.
 
 import { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Alert, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Pressable, Alert, Platform, ScrollView, Linking } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Unit, DarkMode, AppSettings } from '../../src/lib/types';
@@ -202,8 +202,19 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.section}>
+        <GText style={styles.sectionTitle}>About</GText>
+        <GText style={styles.helpText}>
+          Gymmy stores your workouts locally on this device. Nothing is
+          sent to any server.
+        </GText>
+        <Pressable onPress={() => Linking.openURL('mailto:dsvit@proton.me')}>
+          <GText style={styles.linkText}>dsvit@proton.me</GText>
+        </Pressable>
+      </View>
+
         <View style={styles.footer}>
-          <GText style={styles.footerText}>GymTracker v1.0</GText>
+          <GText style={styles.footerText}>Gymmy v1.0</GText>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -289,6 +300,11 @@ const getStyles = (colors: ThemeColors) =>
     },
     secondaryText: {
       fontSize: 15,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    linkText: {
+      fontSize: 14,
       fontWeight: '600',
       color: colors.primary,
     },

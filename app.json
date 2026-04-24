@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GymTracker",
+    "name": "Gymmy",
     "slug": "GymTracker",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,8 +27,8 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "single",
-      "name": "GymTracker",
-      "shortName": "GymTracker",
+      "name": "Gymmy",
+      "shortName": "Gymmy",
       "lang": "en",
       "themeColor": "#8B7355",
       "backgroundColor": "#F5F5F5",

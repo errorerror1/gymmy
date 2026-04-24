@@ -66,7 +66,7 @@ export default function RootLayout() {
     const appleMeta = [
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-      { name: 'apple-mobile-web-app-title', content: 'GymTracker' },
+      { name: 'apple-mobile-web-app-title', content: 'Gymmy' },
     ];
     appleMeta.forEach(({ name, content }) => {
       let m = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
@@ -113,13 +113,21 @@ function MetaTags() {
   const { resolved } = useThemeMode();
   useEffect(() => {
     if (typeof document === 'undefined') return;
+    const bg = resolved === 'dark' ? '#0F0F0F' : '#F5F5F5';
+
     let metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
     if (!metaTheme) {
       metaTheme = document.createElement('meta');
       metaTheme.name = 'theme-color';
       document.head.appendChild(metaTheme);
     }
-    metaTheme.content = resolved === 'dark' ? '#0F0F0F' : '#F5F5F5';
+    metaTheme.content = bg;
+
+    // Paint the root elements so the iPhone home-indicator safe area and any
+    // other gap outside the React tree inherits the theme background instead
+    // of the browser default white.
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
   }, [resolved]);
   return null;
 }
