@@ -40,6 +40,16 @@ export default function RootLayout() {
       document.head.appendChild(link);
     }
 
+    // iOS home-screen icon. Without this, iOS falls back to a screenshot of
+    // the page — explicit apple-touch-icon gives a crisp icon at 180x180.
+    let touchIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
+    if (!touchIcon) {
+      touchIcon = document.createElement('link');
+      touchIcon.rel = 'apple-touch-icon';
+      document.head.appendChild(touchIcon);
+    }
+    touchIcon.href = '/icon/apple-touch-icon.png';
+
     // Viewport — must include viewport-fit=cover so env(safe-area-inset-top)
     // reports the real iPhone status bar height in PWA standalone mode.
     let viewport = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
