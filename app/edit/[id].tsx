@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LIFTS, LIFT_COLOR, WorkoutLog } from '../../src/lib/types';
 import { useTheme, ThemeColors } from '../../src/lib/theme';
 import { getLogs, updateLogSets, deleteLog } from '../../src/lib/storage';
+import { confirmDestructive } from '../../src/lib/confirm';
 import { GText } from '../../src/components/GText';
 import { GTextInput } from '../../src/components/GTextInput';
 
@@ -76,21 +77,14 @@ export default function EditLogScreen() {
 
   const handleDelete = () => {
     if (!log) return;
-    Alert.alert('Delete workout?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteLog(log.id);
-            router.back();
-          } catch {
-            Alert.alert('Error', 'Failed to delete workout');
-          }
-        },
-      },
-    ]);
+    confirmDestructive('Delete workout?', 'This cannot be undone.', async () => {
+      try {
+        await deleteLog(log.id);
+        router.back();
+      } catch {
+        Alert.alert('Error', 'Failed to delete workout');
+      }
+    });
   };
 
   if (notFound) {
@@ -138,6 +132,7 @@ export default function EditLogScreen() {
         </View>
 
         <ScrollView
+          style={styles.scroll}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
@@ -195,6 +190,9 @@ const getStyles = (colors: ThemeColors) =>
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    scroll: {
+      flex: 1,
     },
     header: {
       flexDirection: 'row',
@@ -287,7 +285,7 @@ const getStyles = (colors: ThemeColors) =>
       gap: 10,
     },
     setInput: {
-      minWidth: 60,
+      width: 80,
       paddingVertical: 8,
       paddingHorizontal: 12,
       borderRadius: 10,

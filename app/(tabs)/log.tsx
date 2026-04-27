@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LIFTS, LiftKey, LIFT_COLOR, WorkoutLog, RepScheme } from '../../src/lib/types';
 import { useTheme, ThemeColors } from '../../src/lib/theme';
 import { getLogs, deleteLog as deleteStoredLog } from '../../src/lib/storage';
+import { confirmDestructive } from '../../src/lib/confirm';
 import { GText } from '../../src/components/GText';
 import { Heatmap } from '../../src/components/Heatmap';
 
@@ -100,20 +101,13 @@ export default function LogScreen() {
   );
 
   const deleteLog = useCallback((id: string) => {
-    Alert.alert('Delete workout?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setLogs(await deleteStoredLog(id));
-          } catch (e) {
-            Alert.alert('Error', 'Failed to delete workout');
-          }
-        },
-      },
-    ]);
+    confirmDestructive('Delete workout?', 'This cannot be undone.', async () => {
+      try {
+        setLogs(await deleteStoredLog(id));
+      } catch (e) {
+        Alert.alert('Error', 'Failed to delete workout');
+      }
+    });
   }, []);
 
   const editLog = useCallback((id: string) => {

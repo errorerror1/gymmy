@@ -18,6 +18,7 @@ import {
   importAll,
   DEFAULT_SETTINGS,
 } from '../../src/lib/storage';
+import { confirmDestructive } from '../../src/lib/confirm';
 import { GText } from '../../src/components/GText';
 
 export default function SettingsScreen() {
@@ -56,20 +57,14 @@ export default function SettingsScreen() {
   };
 
   const clearData = () => {
-    Alert.alert(
+    confirmDestructive(
       'Clear All Data',
       'This will delete all your workout logs and settings. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            await clearAll();
-            Alert.alert('Done', 'All data cleared');
-          },
-        },
-      ]
+      async () => {
+        await clearAll();
+        Alert.alert('Done', 'All data cleared');
+      },
+      'Clear'
     );
   };
 
