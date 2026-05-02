@@ -40,6 +40,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   unit: 'lb',
   repScheme: '555',
   darkMode: 'auto',
+  availablePlates: {
+    lb: [45, 35, 25, 10, 5, 2.5],
+    kg: [25, 20, 15, 10, 5, 2.5, 1.25],
+  },
 };
 
 // --- Lifts ------------------------------------------------------------------

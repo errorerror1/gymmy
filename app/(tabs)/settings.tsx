@@ -19,6 +19,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../../src/lib/storage';
 import { confirmDestructive } from '../../src/lib/confirm';
+import { STANDARD_PLATES } from '../../src/lib/plates';
 import { GText } from '../../src/components/GText';
 
 export default function SettingsScreen() {
@@ -54,6 +55,20 @@ export default function SettingsScreen() {
     // Theme provider owns the in-memory mode and writes the settings blob itself.
     setDarkMode(mode);
     setSettings((s) => ({ ...s, darkMode: mode }));
+  };
+
+  const togglePlate = async (plate: number) => {
+    const current = settings.availablePlates[settings.unit];
+    const next = current.includes(plate)
+      ? current.filter((p) => p !== plate)
+      : [...current, plate].sort((a, b) => b - a);
+    const nextPlates = { ...settings.availablePlates, [settings.unit]: next };
+    setSettings((s) => ({ ...s, availablePlates: nextPlates }));
+    try {
+      await patchSettings({ availablePlates: nextPlates });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save plates');
+    }
   };
 
   const clearData = () => {
@@ -154,6 +169,32 @@ export default function SettingsScreen() {
               Kilograms (kg)
             </GText>
           </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <GText style={styles.sectionTitle}>Plates ({settings.unit})</GText>
+        <GText style={styles.helpText}>
+          Tap to include or exclude a plate size. Affects the per-side
+          breakdown shown next to each working set.
+        </GText>
+        <View style={styles.platesRow}>
+          {STANDARD_PLATES[settings.unit].map((p) => {
+            const active = settings.availablePlates[settings.unit].includes(p);
+            return (
+              <Pressable
+                key={p}
+                style={[styles.platePill, active && styles.platePillActive]}
+                onPress={() => togglePlate(p)}
+              >
+                <GText
+                  style={[styles.platePillText, active && styles.platePillTextActive]}
+                >
+                  {p}
+                </GText>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
@@ -279,6 +320,33 @@ const getStyles = (colors: ThemeColors) =>
       lineHeight: 19,
       color: colors.textSecondary,
       marginBottom: 14,
+    },
+    platesRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    platePill: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minWidth: 52,
+      alignItems: 'center',
+    },
+    platePillActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    platePillText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    platePillTextActive: {
+      color: colors.background,
     },
     buttonRow: {
       flexDirection: 'row',

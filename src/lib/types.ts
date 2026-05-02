@@ -49,6 +49,9 @@ export interface AppSettings {
   unit: 'lb' | 'kg';
   repScheme: RepScheme;
   darkMode: 'auto' | 'light' | 'dark';
+  // Per-unit list of plates the user actually has at their gym. Defaults to
+  // the full Olympic set; entries removed via the Settings → Plates section.
+  availablePlates: { lb: number[]; kg: number[] };
 }
 
 export type Unit = 'lb' | 'kg';

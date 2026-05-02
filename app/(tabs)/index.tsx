@@ -41,6 +41,7 @@ import {
   getRepsForScheme,
   INCREMENT,
 } from '../../src/lib/531';
+import { breakdown, formatBreakdown } from '../../src/lib/plates';
 import {
   DEFAULT_SETTINGS,
   appendLog,
@@ -180,6 +181,7 @@ export default function TrainScreen() {
               liftData={lifts[lift.key]}
               unit={settings.unit}
               repScheme={settings.repScheme}
+              availablePlates={settings.availablePlates[settings.unit]}
               changeRepScheme={changeRepScheme}
               updateTM={(newTM) => updateTM(lift.key, newTM)}
               updateAssistance={(text) => updateAssistance(lift.key, text)}
@@ -200,6 +202,7 @@ interface LiftPageProps {
   liftData: LiftData;
   unit: Unit;
   repScheme: RepScheme;
+  availablePlates: number[];
   changeRepScheme: (scheme: RepScheme) => void;
   updateTM: (newTM: number | null) => void;
   updateAssistance: (text: string) => void;
@@ -210,10 +213,10 @@ interface LiftPageProps {
 }
 
 function LiftPage({
-  lift,
   liftData,
   unit,
   repScheme,
+  availablePlates,
   changeRepScheme,
   updateTM,
   updateAssistance,
@@ -268,17 +271,29 @@ function LiftPage({
 
         <GText style={styles.sectionLabel}>Sets</GText>
         <View style={styles.setsContainer}>
-          {repsList.map((rep, i) => (
-            <View key={i} style={styles.setCard}>
-              <View style={styles.setLeft}>
-                <GText style={styles.setNumber}>Set {i + 1}</GText>
-                <GText style={styles.setReps}>{rep} reps</GText>
+          {repsList.map((rep, i) => {
+            const b = liftData.tm
+              ? breakdown(setWeights[i], unit, availablePlates)
+              : null;
+            return (
+              <View key={i} style={styles.setCard}>
+                <View style={styles.setRow}>
+                  <View style={styles.setLeft}>
+                    <GText style={styles.setNumber}>Set {i + 1}</GText>
+                    <GText style={styles.setReps}>{rep} reps</GText>
+                  </View>
+                  <GText style={styles.setWeight}>
+                    {formatWeightValue(setWeights[i], unit)} {unit}
+                  </GText>
+                </View>
+                {b ? (
+                  <GText style={styles.setBreakdown}>
+                    {formatBreakdown(b, setWeights[i], unit)}
+                  </GText>
+                ) : null}
               </View>
-              <GText style={styles.setWeight}>
-                {formatWeightValue(setWeights[i], unit)} {unit}
-              </GText>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         <GText style={styles.sectionLabel}>Accessory</GText>
@@ -364,19 +379,27 @@ const getStyles = (colors: ThemeColors) =>
       gap: 10,
     },
     setCard: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 18,
+      paddingVertical: 14,
       paddingHorizontal: 20,
       borderRadius: 14,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
+      gap: 6,
+    },
+    setRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     setLeft: {
       flexDirection: 'column',
       gap: 2,
+    },
+    setBreakdown: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      letterSpacing: 0.3,
     },
     setNumber: {
       fontSize: 16,
