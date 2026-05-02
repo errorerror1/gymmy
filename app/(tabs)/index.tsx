@@ -6,7 +6,9 @@
 //   - the Training Max (hold-then-drag to edit)
 //   - the 3 working sets, calculated from TM × scheme percentages
 //   - a free-text accessory/notes area
-//   - a Save button that appends a WorkoutLog entry
+//   - a Save button that appends a WorkoutLog entry. The current accessory
+//     text is snapshotted into the log's `notes` field at save time so it
+//     survives later edits and shows up in the Log feed.
 //
 // All persistence goes through src/lib/storage.ts — this screen never
 // touches AsyncStorage directly.
@@ -70,12 +72,9 @@ export default function TrainScreen() {
   const colors = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
-  // Which lift is currently on screen (pager index).
   const [currentIndex, setCurrentIndex] = useState(0);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [lifts, setLifts] = useState<LiftsMap>(EMPTY_LIFTS);
-
-  // While the TMDragValue is armed we lock both ScrollViews so the drag wins.
   const [tmDragLocked, setTmDragLocked] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -91,7 +90,6 @@ export default function TrainScreen() {
     }
   }, []);
 
-  // Reload on focus so changes from the edit modal or Settings show up.
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -134,6 +132,7 @@ export default function TrainScreen() {
       id: Date.now().toString(),
       liftKey,
       repScheme: settings.repScheme,
+      notes: lift.assistance || undefined,
       sets,
       date: new Date().toISOString(),
     };
@@ -262,7 +261,6 @@ function LiftPage({
             colors={colors}
           />
         ) : (
-          // Seed to 135 lb — the classic "empty barbell + two 45s" starting point.
           <Pressable onPress={() => updateTM(135)}>
             <GText style={styles.tmPlaceholder}>Tap to set TM</GText>
           </Pressable>

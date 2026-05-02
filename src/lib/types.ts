@@ -40,6 +40,7 @@ export interface WorkoutLog {
   id: string;
   liftKey: LiftKey;
   repScheme: RepScheme;
+  notes?: string;
   sets: WorkoutSet[];
   date: string;
 }

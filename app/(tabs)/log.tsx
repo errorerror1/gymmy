@@ -10,13 +10,13 @@
 //      its TM — we back it out from the top set's weight and the rep
 //      scheme's top-set percentage.
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Pressable,
   Dimensions,
-  FlatList,
+  SectionList,
   Animated,
   PanResponder,
   Alert,
@@ -75,16 +75,36 @@ function formatShort(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+function formatSectionDate(dateKey: string): string {
+  const d = new Date(dateKey + 'T12:00:00');
+  return d
+    .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    .toUpperCase();
+}
+
+function dateFromKey(key: string): Date {
+  return new Date(key + 'T12:00:00');
+}
+
 function liftName(key: LiftKey): string {
   return LIFTS.find((l) => l.key === key)?.name ?? key;
 }
+
+interface LogSection {
+  title: string;
+  dateKey: string;
+  data: WorkoutLog[];
+}
+
+const MAX_AUTO_EXPAND = 5;
 
 export default function LogScreen() {
   const colors = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [showTrend, setShowTrend] = useState(false);
-  const feedRef = useRef<FlatList<WorkoutLog>>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const feedRef = useRef<SectionList<WorkoutLog>>(null);
 
   const loadLogs = useCallback(async () => {
     try {
@@ -114,30 +134,75 @@ export default function LogScreen() {
     router.push(`/edit/${id}`);
   }, []);
 
-  const { sortedLogs, indexByDate } = useMemo(() => {
+  const { sections, visibleSections } = useMemo(() => {
     const sorted = [...logs].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-    const indexByDate = new Map<string, number>();
-    sorted.forEach((log, i) => {
+    const groups = new Map<string, WorkoutLog[]>();
+    for (const log of sorted) {
       const key = log.date.slice(0, 10);
-      if (!indexByDate.has(key)) indexByDate.set(key, i);
+      const arr = groups.get(key) ?? [];
+      arr.push(log);
+      groups.set(key, arr);
+    }
+    const rawSections: LogSection[] = [];
+    for (const [dateKey, data] of groups) {
+      rawSections.push({ title: formatSectionDate(dateKey), dateKey, data });
+    }
+    rawSections.sort(
+      (a, b) => dateFromKey(b.dateKey).getTime() - dateFromKey(a.dateKey).getTime()
+    );
+
+    const visible = rawSections.map((s) =>
+      expandedSections.has(s.dateKey) ? s : { ...s, data: [] }
+    );
+
+    return { sections: rawSections, visibleSections: visible };
+  }, [logs, expandedSections]);
+
+  useEffect(() => {
+    if (expandedSections.size === 0 && sections.length > 0) {
+      const next = new Set<string>();
+      for (let i = 0; i < Math.min(sections.length, MAX_AUTO_EXPAND); i++) {
+        next.add(sections[i].dateKey);
+      }
+      setExpandedSections(next);
+    }
+  }, [sections.length, expandedSections.size]);
+
+  const sectionIndexByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    sections.forEach((s, i) => map.set(s.dateKey, i));
+    return map;
+  }, [sections]);
+
+  const toggleSection = (dateKey: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      return next;
     });
-    return { sortedLogs: sorted, indexByDate };
-  }, [logs]);
+  };
 
   const handleDayTap = (dateKey: string) => {
-    const idx = indexByDate.get(dateKey);
-    if (idx == null) return;
-    feedRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.1 });
+    const sectionIndex = sectionIndexByDate.get(dateKey);
+    if (sectionIndex == null) return;
+    setExpandedSections((prev) => new Set([...prev, dateKey]));
+    feedRef.current?.scrollToLocation({
+      sectionIndex,
+      itemIndex: 0,
+      animated: true,
+      viewPosition: 0.1,
+    });
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <FlatList
+      <SectionList
         ref={feedRef}
         style={styles.list}
-        data={sortedLogs}
+        sections={visibleSections}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <SwipeableRow
@@ -148,10 +213,29 @@ export default function LogScreen() {
             <SessionCard log={item} colors={colors} />
           </SwipeableRow>
         )}
+        renderSectionHeader={({ section }) => (
+          <Pressable
+            style={styles.sectionHeader}
+            onPress={() => toggleSection(section.dateKey)}
+          >
+            <GText style={styles.sectionHeaderText}>
+              {section.title}  ·  {sections.find((s) => s.dateKey === section.dateKey)?.data.length ?? 0} entry
+              {(((sections.find((s) => s.dateKey === section.dateKey)?.data.length) ?? 0) !== 1) ? 'ies' : ''}
+            </GText>
+            <GText style={styles.sectionChevron}>
+              {expandedSections.has(section.dateKey) ? '▾' : '▸'}
+            </GText>
+          </Pressable>
+        )}
         contentContainerStyle={styles.listContent}
         onScrollToIndexFailed={(info) => {
           setTimeout(() => {
-            feedRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+            feedRef.current?.scrollToLocation({
+              sectionIndex: info.index as number,
+              itemIndex: 0,
+              animated: true,
+              viewPosition: 0.1,
+            });
           }, 100);
         }}
         ListHeaderComponent={
@@ -198,11 +282,10 @@ export default function LogScreen() {
 
 function SessionCard({ log, colors }: { log: WorkoutLog; colors: ThemeColors }) {
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const color = LIFT_COLOR[log.liftKey];
   const setsLine = log.sets.map((s) => `${s.weight}×${s.reps}`).join(' · ');
   return (
     <View style={styles.sessionCard}>
-      <View style={[styles.accentStripe, { backgroundColor: color }]} />
+      <View style={[styles.accentStripe, { backgroundColor: LIFT_COLOR[log.liftKey] }]} />
       <View style={styles.sessionBody}>
         <View style={styles.sessionRow1}>
           <GText style={styles.sessionLift}>{liftName(log.liftKey)}</GText>
@@ -217,6 +300,11 @@ function SessionCard({ log, colors }: { log: WorkoutLog; colors: ThemeColors }) 
             {setsLine}
           </GText>
         </View>
+        {log.notes ? (
+          <GText style={styles.notesLine} numberOfLines={2}>
+            ✎ {log.notes}
+          </GText>
+        ) : null}
       </View>
     </View>
   );
@@ -567,6 +655,32 @@ const getStyles = (colors: ThemeColors) =>
       fontSize: 11,
       fontWeight: '600',
       color: colors.primary,
+    },
+    notesLine: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      lineHeight: 17,
+      marginTop: 4,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 24,
+      paddingVertical: 10,
+      marginTop: 6,
+      backgroundColor: colors.background,
+    },
+    sectionHeaderText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    sectionChevron: {
+      fontSize: 14,
+      color: colors.textSecondary,
     },
     trendToggle: {
       alignSelf: 'center',

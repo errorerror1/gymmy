@@ -116,6 +116,16 @@ export async function updateLogSets(
   return next;
 }
 
+export async function updateLogNotes(
+  id: string,
+  notes: string
+): Promise<WorkoutLog[]> {
+  const logs = await getLogs();
+  const next = logs.map((l) => (l.id === id ? { ...l, notes } : l));
+  await saveLogs(next);
+  return next;
+}
+
 // --- Settings ---------------------------------------------------------------
 
 export async function getSettings(): Promise<AppSettings> {

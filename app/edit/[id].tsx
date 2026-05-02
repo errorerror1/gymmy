@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LIFTS, LIFT_COLOR, WorkoutLog } from '../../src/lib/types';
 import { useTheme, ThemeColors } from '../../src/lib/theme';
-import { getLogs, updateLogSets, deleteLog } from '../../src/lib/storage';
+import { getLogs, updateLogSets, updateLogNotes, deleteLog } from '../../src/lib/storage';
 import { confirmDestructive } from '../../src/lib/confirm';
 import { GText } from '../../src/components/GText';
 import { GTextInput } from '../../src/components/GTextInput';
@@ -34,6 +34,7 @@ export default function EditLogScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [log, setLog] = useState<WorkoutLog | null>(null);
   const [drafts, setDrafts] = useState<SetDraft[]>([]);
+  const [notes, setNotes] = useState('');
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function EditLogScreen() {
         setDrafts(
           found.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps) }))
         );
+        setNotes(found.notes ?? '');
       } catch {
         setNotFound(true);
       }
@@ -69,6 +71,7 @@ export default function EditLogScreen() {
     }));
     try {
       await updateLogSets(log.id, sets);
+      await updateLogNotes(log.id, notes);
       router.back();
     } catch {
       Alert.alert('Error', 'Failed to save changes');
@@ -105,8 +108,8 @@ export default function EditLogScreen() {
     return <SafeAreaView style={styles.container} edges={['top']} />;
   }
 
-  const liftName = LIFTS.find((l) => l.key === log.liftKey)?.name ?? log.liftKey;
-  const color = LIFT_COLOR[log.liftKey];
+  const liftLabel = LIFTS.find((l) => l.key === log.liftKey)?.name ?? log.liftKey;
+  const accentColor = LIFT_COLOR[log.liftKey];
   const dateLabel = new Date(log.date).toLocaleString(undefined, {
     weekday: 'short',
     month: 'short',
@@ -137,8 +140,8 @@ export default function EditLogScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.liftRow}>
-            <View style={[styles.liftDot, { backgroundColor: color }]} />
-            <GText style={styles.liftName}>{liftName}</GText>
+            <View style={[styles.liftDot, { backgroundColor: accentColor }]} />
+            <GText style={styles.liftName}>{liftLabel}</GText>
             <View style={styles.schemeBadge}>
               <GText style={styles.schemeText}>{log.repScheme}</GText>
             </View>
@@ -174,6 +177,17 @@ export default function EditLogScreen() {
               </View>
             ))}
           </View>
+
+          <GText style={styles.sectionLabel}>Notes</GText>
+          <GTextInput
+            style={styles.notesInput}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Accessory work, notes..."
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            textAlignVertical="top"
+          />
 
           <Pressable style={styles.deleteButton} onPress={handleDelete}>
             <Ionicons name="trash-outline" size={18} color={colors.error} />
@@ -300,6 +314,18 @@ const getStyles = (colors: ThemeColors) =>
     setSep: {
       fontSize: 16,
       color: colors.textSecondary,
+    },
+    notesInput: {
+      minHeight: 80,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      fontSize: 14,
+      lineHeight: 20,
     },
     deleteButton: {
       flexDirection: 'row',
