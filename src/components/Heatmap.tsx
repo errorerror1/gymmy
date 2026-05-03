@@ -17,13 +17,11 @@ import { useMemo, useRef } from 'react';
 import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { LiftKey, LIFT_COLOR, WorkoutLog } from '../lib/types';
 import { useTheme, ThemeColors } from '../lib/theme';
-import { GText } from './GText';
 
 const CELL = 14;
 const GAP = 3;
 const WEEKS = 53;
 const ROWS = 7;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const QUADRANT_ORDER: LiftKey[] = ['squat', 'bench', 'deadlift', 'ohp'];
 
 function startOfDay(d: Date): Date {
@@ -58,10 +56,10 @@ interface HeatmapProps {
 
 export function Heatmap({ logs, onDayTap }: HeatmapProps) {
   const colors = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(), []);
   const scrollRef = useRef<ScrollView>(null);
 
-  const { byDate, weeks, monthLabels, today } = useMemo(() => {
+  const { byDate, weeks, today } = useMemo(() => {
     const today = startOfDay(new Date());
     const startDate = addDays(mondayOf(today), -(WEEKS - 1) * 7);
 
@@ -82,20 +80,8 @@ export function Heatmap({ logs, onDayTap }: HeatmapProps) {
       weeks.push({ col, dates });
     }
 
-    const monthLabels: { col: number; label: string }[] = [];
-    let prevMonth = -1;
-    for (let col = 0; col < WEEKS; col++) {
-      const m = weeks[col].dates[0].getMonth();
-      if (m !== prevMonth) {
-        monthLabels.push({ col, label: MONTHS[m] });
-        prevMonth = m;
-      }
-    }
-
-    return { byDate, weeks, monthLabels, today };
+    return { byDate, weeks, today };
   }, [logs]);
-
-  const totalWidth = WEEKS * CELL + (WEEKS - 1) * GAP;
 
   return (
     <ScrollView
@@ -105,37 +91,25 @@ export function Heatmap({ logs, onDayTap }: HeatmapProps) {
       onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
       contentContainerStyle={styles.scroll}
     >
-      <View>
-        <View style={[styles.monthRow, { width: totalWidth }]}>
-          {monthLabels.map(({ col, label }) => (
-            <GText
-              key={`${col}-${label}`}
-              style={[styles.monthLabel, { left: col * (CELL + GAP) }]}
-            >
-              {label}
-            </GText>
-          ))}
-        </View>
-        <View style={styles.grid}>
-          {weeks.map(({ col, dates }) => (
-            <View key={col} style={styles.col}>
-              {dates.map((d, row) => {
-                const key = dateKey(d);
-                const isFuture = d.getTime() > today.getTime();
-                const lifts = byDate.get(key);
-                return (
-                  <DayCell
-                    key={row}
-                    isFuture={isFuture}
-                    lifts={lifts}
-                    onTap={lifts && onDayTap ? () => onDayTap(key) : undefined}
-                    colors={colors}
-                  />
-                );
-              })}
-            </View>
-          ))}
-        </View>
+      <View style={styles.grid}>
+        {weeks.map(({ col, dates }) => (
+          <View key={col} style={styles.col}>
+            {dates.map((d, row) => {
+              const key = dateKey(d);
+              const isFuture = d.getTime() > today.getTime();
+              const lifts = byDate.get(key);
+              return (
+                <DayCell
+                  key={row}
+                  isFuture={isFuture}
+                  lifts={lifts}
+                  onTap={lifts && onDayTap ? () => onDayTap(key) : undefined}
+                  colors={colors}
+                />
+              );
+            })}
+          </View>
+        ))}
       </View>
     </ScrollView>
   );
@@ -152,7 +126,7 @@ function DayCell({
   onTap?: () => void;
   colors: ThemeColors;
 }) {
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(), []);
 
   if (isFuture) {
     return <View style={styles.cellFuture} />;
@@ -191,21 +165,10 @@ function DayCell({
   return <>{inner}</>;
 }
 
-const getStyles = (colors: ThemeColors) =>
+const getStyles = () =>
   StyleSheet.create({
     scroll: {
       paddingHorizontal: 20,
-    },
-    monthRow: {
-      height: 16,
-      marginBottom: 4,
-      position: 'relative',
-    },
-    monthLabel: {
-      position: 'absolute',
-      fontSize: 10,
-      color: colors.textSecondary,
-      letterSpacing: 0.5,
     },
     grid: {
       flexDirection: 'row',

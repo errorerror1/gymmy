@@ -105,6 +105,7 @@ export default function LogScreen() {
   const [showTrend, setShowTrend] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const feedRef = useRef<SectionList<WorkoutLog>>(null);
+  const autoExpandedRef = useRef(false);
 
   const loadLogs = useCallback(async () => {
     try {
@@ -160,15 +161,18 @@ export default function LogScreen() {
     return { sections: rawSections, visibleSections: visible };
   }, [logs, expandedSections]);
 
+  // Auto-expand the most recent sections once on first load. Gated by a ref
+  // so that collapsing the last expanded section doesn't re-trigger this.
   useEffect(() => {
-    if (expandedSections.size === 0 && sections.length > 0) {
-      const next = new Set<string>();
-      for (let i = 0; i < Math.min(sections.length, MAX_AUTO_EXPAND); i++) {
-        next.add(sections[i].dateKey);
-      }
-      setExpandedSections(next);
+    if (autoExpandedRef.current) return;
+    if (sections.length === 0) return;
+    autoExpandedRef.current = true;
+    const next = new Set<string>();
+    for (let i = 0; i < Math.min(sections.length, MAX_AUTO_EXPAND); i++) {
+      next.add(sections[i].dateKey);
     }
-  }, [sections.length, expandedSections.size]);
+    setExpandedSections(next);
+  }, [sections]);
 
   const sectionIndexByDate = useMemo(() => {
     const map = new Map<string, number>();
