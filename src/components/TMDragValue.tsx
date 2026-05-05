@@ -18,7 +18,7 @@
 //    first attached.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { Unit } from '../lib/types';
 import { ThemeColors } from '../lib/theme';
 import { GText } from './GText';
@@ -151,6 +151,13 @@ const getStyles = (colors: ThemeColors) =>
     dragArea: {
       alignItems: 'center',
       paddingVertical: 8,
+      // Web-only: Android Chrome/Brave default `touch-action` treats any
+      // touch as a potential page scroll, which eats the pointermove events
+      // before our long-press fires. `none` claims the gesture for us.
+      // `userSelect` belts-and-suspenders the GText `selectable={false}` so
+      // a 1s hold can't trigger the browser's text-selection menu.
+      // Both properties are no-ops on native RN.
+      ...(Platform.OS === 'web' ? { touchAction: 'none', userSelect: 'none' as const } : {}),
     },
     valueRow: {
       flexDirection: 'row',
