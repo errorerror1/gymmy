@@ -44,6 +44,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
     lb: [45, 35, 25, 10, 5, 2.5],
     kg: [25, 20, 15, 10, 5, 2.5, 1.25],
   },
+  features: {
+    amrap: true,
+    warmups: true,
+    cycleHelper: true,
+  },
 };
 
 // --- Lifts ------------------------------------------------------------------
@@ -136,7 +141,21 @@ export async function getSettings(): Promise<AppSettings> {
   const raw = await AsyncStorage.getItem(KEYS.SETTINGS);
   if (!raw) return { ...DEFAULT_SETTINGS };
   try {
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<AppSettings>) };
+    const parsed = JSON.parse(raw) as Partial<AppSettings>;
+    // Nested objects need their own merge, or a settings blob written by
+    // an older build silently drops keys added since (e.g. `features`).
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      availablePlates: {
+        ...DEFAULT_SETTINGS.availablePlates,
+        ...parsed.availablePlates,
+      },
+      features: {
+        ...DEFAULT_SETTINGS.features,
+        ...parsed.features,
+      },
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

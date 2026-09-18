@@ -5,10 +5,10 @@
 // in-memory switch); every other setting goes through src/lib/storage.ts.
 
 import { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Alert, Platform, ScrollView, Linking } from 'react-native';
+import { View, StyleSheet, Pressable, Platform, ScrollView, Linking, Switch } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Unit, DarkMode, AppSettings } from '../../src/lib/types';
+import { Unit, DarkMode, AppSettings, FeatureFlags } from '../../src/lib/types';
 import { useTheme, useThemeMode, ThemeColors } from '../../src/lib/theme';
 import {
   getSettings,
@@ -21,6 +21,25 @@ import {
 import { confirmDestructive } from '../../src/lib/confirm';
 import { STANDARD_PLATES } from '../../src/lib/plates';
 import { GText } from '../../src/components/GText';
+import { toast } from '../../src/components/Toast';
+
+const FEATURE_ROWS: { key: keyof FeatureFlags; label: string; help: string }[] = [
+  {
+    key: 'amrap',
+    label: 'AMRAP & PRs',
+    help: 'Rep counter on the top set, PR badges, e1RM trend.',
+  },
+  {
+    key: 'warmups',
+    label: 'Warm-up sets',
+    help: '40/50/60% ramp above the working sets.',
+  },
+  {
+    key: 'cycleHelper',
+    label: 'Cycle helper',
+    help: 'Last-logged info, one-tap TM bump, week-complete hint.',
+  },
+];
 
 export default function SettingsScreen() {
   const colors = useTheme();
@@ -47,7 +66,17 @@ export default function SettingsScreen() {
     try {
       await patchSettings({ unit });
     } catch (e) {
-      Alert.alert('Error', 'Failed to save settings');
+      toast('Failed to save settings');
+    }
+  };
+
+  const updateFeature = async (key: keyof FeatureFlags, value: boolean) => {
+    const features = { ...settings.features, [key]: value };
+    setSettings((s) => ({ ...s, features }));
+    try {
+      await patchSettings({ features });
+    } catch (e) {
+      toast('Failed to save settings');
     }
   };
 
@@ -67,7 +96,7 @@ export default function SettingsScreen() {
     try {
       await patchSettings({ availablePlates: nextPlates });
     } catch (e) {
-      Alert.alert('Error', 'Failed to save plates');
+      toast('Failed to save plates');
     }
   };
 
@@ -77,7 +106,8 @@ export default function SettingsScreen() {
       'This will delete all your workout logs and settings. Are you sure?',
       async () => {
         await clearAll();
-        Alert.alert('Done', 'All data cleared');
+        await loadSettings();
+        toast('All data cleared');
       },
       'Clear'
     );
@@ -88,7 +118,7 @@ export default function SettingsScreen() {
   // expo-file-system + expo-sharing + expo-document-picker.
   const handleExport = async () => {
     if (Platform.OS !== 'web') {
-      Alert.alert('Not available', 'Export is currently only supported on web.');
+      toast('Export is currently only supported on web');
       return;
     }
     try {
@@ -104,14 +134,15 @@ export default function SettingsScreen() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      toast('Backup downloaded');
     } catch (e) {
-      Alert.alert('Error', 'Failed to export data');
+      toast('Failed to export data');
     }
   };
 
   const handleImport = () => {
     if (Platform.OS !== 'web') {
-      Alert.alert('Not available', 'Import is currently only supported on web.');
+      toast('Import is currently only supported on web');
       return;
     }
     const input = document.createElement('input');
@@ -126,10 +157,10 @@ export default function SettingsScreen() {
           const payload = JSON.parse(text);
           await importAll(payload);
           await loadSettings();
-          Alert.alert('Restored', 'Backup imported. Reload the app to see all updates.');
+          toast('Backup imported — reload the app to see all updates');
         } catch (e) {
           const msg = e instanceof Error ? e.message : 'Unknown error';
-          Alert.alert('Import failed', msg);
+          toast(`Import failed: ${msg}`);
         }
       };
       // Confirm before overwriting existing local data.
@@ -216,6 +247,28 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
+        <GText style={styles.sectionTitle}>Features</GText>
+        <GText style={styles.helpText}>
+          Optional additions to the Train screen. Turn off anything you
+          don't use — the app falls back to the plain 5/3/1 sheet.
+        </GText>
+        {FEATURE_ROWS.map(({ key, label, help }) => (
+          <View key={key} style={styles.featureRow}>
+            <View style={styles.featureTextWrap}>
+              <GText style={styles.featureLabel}>{label}</GText>
+              <GText style={styles.featureHelp}>{help}</GText>
+            </View>
+            <Switch
+              value={settings.features[key]}
+              onValueChange={(v) => updateFeature(key, v)}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.section}>
         <GText style={styles.sectionTitle}>Backup</GText>
         <GText style={styles.helpText}>
           Export a JSON file of all your workouts, training maxes, and settings.
@@ -250,7 +303,7 @@ export default function SettingsScreen() {
       </View>
 
         <View style={styles.footer}>
-          <GText style={styles.footerText}>Gymmy v1.0</GText>
+          <GText style={styles.footerText}>Gymmy v1.1</GText>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -351,6 +404,26 @@ const getStyles = (colors: ThemeColors) =>
     buttonRow: {
       flexDirection: 'row',
       gap: 10,
+    },
+    featureRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      paddingVertical: 8,
+    },
+    featureTextWrap: {
+      flex: 1,
+      gap: 2,
+    },
+    featureLabel: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    featureHelp: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: colors.textSecondary,
     },
     secondaryButton: {
       flex: 1,

@@ -50,6 +50,13 @@ export function formatWeight(weight: number, unit: Unit): string {
   return `${weight}${unit}`;
 }
 
+// Display form of a weight: kg keeps a meaningful .5/.25 fraction but never
+// a trailing ".0" (102.5, not 100.0); lb is always whole.
+export function formatWeightValue(v: number, unit: Unit): string {
+  if (unit === 'kg') return String(Math.round(v * 100) / 100);
+  return String(Math.round(v));
+}
+
 export function getTabLabels(): string[] {
   return ['555', '333', '531', 'deload'];
 }

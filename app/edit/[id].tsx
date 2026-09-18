@@ -8,7 +8,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +21,7 @@ import { getLogs, updateLogSets, updateLogNotes, deleteLog } from '../../src/lib
 import { confirmDestructive } from '../../src/lib/confirm';
 import { GText } from '../../src/components/GText';
 import { GTextInput } from '../../src/components/GTextInput';
+import { toast } from '../../src/components/Toast';
 
 interface SetDraft {
   weight: string;
@@ -72,9 +72,10 @@ export default function EditLogScreen() {
     try {
       await updateLogSets(log.id, sets);
       await updateLogNotes(log.id, notes);
+      toast('Changes saved');
       router.back();
     } catch {
-      Alert.alert('Error', 'Failed to save changes');
+      toast('Failed to save changes');
     }
   };
 
@@ -83,9 +84,10 @@ export default function EditLogScreen() {
     confirmDestructive('Delete workout?', 'This cannot be undone.', async () => {
       try {
         await deleteLog(log.id);
+        toast('Workout deleted');
         router.back();
       } catch {
-        Alert.alert('Error', 'Failed to delete workout');
+        toast('Failed to delete workout');
       }
     });
   };

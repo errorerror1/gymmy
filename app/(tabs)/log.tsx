@@ -27,7 +27,13 @@ import { LineChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 import { LIFTS, LiftKey, LIFT_COLOR, WorkoutLog, RepScheme } from '../../src/lib/types';
 import { useTheme, ThemeColors } from '../../src/lib/theme';
-import { getLogs, deleteLog as deleteStoredLog } from '../../src/lib/storage';
+import {
+  DEFAULT_SETTINGS,
+  getLogs,
+  getSettings,
+  deleteLog as deleteStoredLog,
+} from '../../src/lib/storage';
+import { bestE1rm, prIds } from '../../src/lib/e1rm';
 import { confirmDestructive } from '../../src/lib/confirm';
 import { GText } from '../../src/components/GText';
 import { Heatmap } from '../../src/components/Heatmap';
@@ -94,6 +100,7 @@ interface LogSection {
   title: string;
   dateKey: string;
   data: WorkoutLog[];
+  count: number;
 }
 
 const MAX_AUTO_EXPAND = 5;
@@ -102,6 +109,7 @@ export default function LogScreen() {
   const colors = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
+  const [amrapOn, setAmrapOn] = useState(DEFAULT_SETTINGS.features.amrap);
   const [showTrend, setShowTrend] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const feedRef = useRef<SectionList<WorkoutLog>>(null);
@@ -109,7 +117,9 @@ export default function LogScreen() {
 
   const loadLogs = useCallback(async () => {
     try {
-      setLogs(await getLogs());
+      const [loadedLogs, settings] = await Promise.all([getLogs(), getSettings()]);
+      setLogs(loadedLogs);
+      setAmrapOn(settings.features.amrap);
     } catch (e) {
       console.error('Error loading logs:', e);
     }
@@ -148,7 +158,12 @@ export default function LogScreen() {
     }
     const rawSections: LogSection[] = [];
     for (const [dateKey, data] of groups) {
-      rawSections.push({ title: formatSectionDate(dateKey), dateKey, data });
+      rawSections.push({
+        title: formatSectionDate(dateKey),
+        dateKey,
+        data,
+        count: data.length,
+      });
     }
     rawSections.sort(
       (a, b) => dateFromKey(b.dateKey).getTime() - dateFromKey(a.dateKey).getTime()
@@ -179,6 +194,10 @@ export default function LogScreen() {
     sections.forEach((s, i) => map.set(s.dateKey, i));
     return map;
   }, [sections]);
+
+  // Sessions that set a new per-lift e1RM at their point in time —
+  // derived, so edits and deletes recompute PRs automatically.
+  const prSet = useMemo(() => prIds(logs), [logs]);
 
   const toggleSection = (dateKey: string) => {
     setExpandedSections((prev) => {
@@ -214,7 +233,11 @@ export default function LogScreen() {
             onEdit={() => editLog(item.id)}
             onDelete={() => deleteLog(item.id)}
           >
-            <SessionCard log={item} colors={colors} />
+            <SessionCard
+              log={item}
+              colors={colors}
+              isPr={amrapOn && prSet.has(item.id)}
+            />
           </SwipeableRow>
         )}
         renderSectionHeader={({ section }) => (
@@ -223,8 +246,7 @@ export default function LogScreen() {
             onPress={() => toggleSection(section.dateKey)}
           >
             <GText style={styles.sectionHeaderText}>
-              {section.title}  ·  {sections.find((s) => s.dateKey === section.dateKey)?.data.length ?? 0} entry
-              {(((sections.find((s) => s.dateKey === section.dateKey)?.data.length) ?? 0) !== 1) ? 'ies' : ''}
+              {section.title}  ·  {section.count} {section.count === 1 ? 'entry' : 'entries'}
             </GText>
             <GText style={styles.sectionChevron}>
               {expandedSections.has(section.dateKey) ? '▾' : '▸'}
@@ -276,7 +298,7 @@ export default function LogScreen() {
                 {showTrend ? 'Hide trend ▴' : 'Show trend ▾'}
               </GText>
             </Pressable>
-            {showTrend ? <TrendChart logs={logs} colors={colors} /> : null}
+            {showTrend ? <TrendChart logs={logs} colors={colors} useE1rm={amrapOn} /> : null}
           </View>
         }
       />
@@ -284,7 +306,15 @@ export default function LogScreen() {
   );
 }
 
-function SessionCard({ log, colors }: { log: WorkoutLog; colors: ThemeColors }) {
+function SessionCard({
+  log,
+  colors,
+  isPr,
+}: {
+  log: WorkoutLog;
+  colors: ThemeColors;
+  isPr: boolean;
+}) {
   const styles = useMemo(() => getStyles(colors), [colors]);
   const setsLine = log.sets.map((s) => `${s.weight}×${s.reps}`).join(' · ');
   return (
@@ -293,6 +323,11 @@ function SessionCard({ log, colors }: { log: WorkoutLog; colors: ThemeColors }) 
       <View style={styles.sessionBody}>
         <View style={styles.sessionRow1}>
           <GText style={styles.sessionLift}>{liftName(log.liftKey)}</GText>
+          {isPr ? (
+            <View style={styles.prBadge}>
+              <GText style={styles.prText}>PR</GText>
+            </View>
+          ) : null}
           <View style={styles.schemeBadge}>
             <GText style={styles.schemeText}>{log.repScheme}</GText>
           </View>
@@ -432,7 +467,15 @@ function SwipeableRow({ children, colors, onEdit, onDelete }: SwipeableRowProps)
   );
 }
 
-function TrendChart({ logs, colors }: { logs: WorkoutLog[]; colors: ThemeColors }) {
+function TrendChart({
+  logs,
+  colors,
+  useE1rm,
+}: {
+  logs: WorkoutLog[];
+  colors: ThemeColors;
+  useE1rm: boolean;
+}) {
   const styles = useMemo(() => getStyles(colors), [colors]);
   const allDates = Array.from(
     new Set(logs.map((l) => l.date.slice(0, 10)))
@@ -446,13 +489,19 @@ function TrendChart({ logs, colors }: { logs: WorkoutLog[]; colors: ThemeColors 
     );
   }
 
+  // With AMRAP on, chart the real signal (best e1RM that day); otherwise
+  // fall back to the TM inferred from the top set. Same-day duplicates
+  // keep the better value.
+  const metric = (log: WorkoutLog) =>
+    useE1rm ? Math.round(bestE1rm(log)) : inferredTM(log);
+
   const datasets = LIFTS.map((l) => {
     const byDate = new Map<string, number>();
     logs
       .filter((log) => log.liftKey === l.key)
       .forEach((log) => {
         const k = log.date.slice(0, 10);
-        byDate.set(k, inferredTM(log));
+        byDate.set(k, Math.max(byDate.get(k) ?? 0, metric(log)));
       });
     let last = NaN;
     const firstDate = allDates.find((d) => byDate.has(d));
@@ -659,6 +708,22 @@ const getStyles = (colors: ThemeColors) =>
       fontSize: 11,
       fontWeight: '600',
       color: colors.primary,
+    },
+    prBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+      backgroundColor: 'rgba(251, 191, 36, 0.16)',
+      borderWidth: 1,
+      borderColor: '#FBBF24',
+      marginLeft: 'auto',
+      marginRight: 8,
+    },
+    prText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#FBBF24',
+      letterSpacing: 0.5,
     },
     notesLine: {
       fontSize: 12,

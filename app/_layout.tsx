@@ -20,6 +20,7 @@ import {
   RobotoCondensed_700Bold,
 } from '@expo-google-fonts/roboto-condensed';
 import { ThemeProvider, useThemeMode } from '../src/lib/theme';
+import { ToastHost } from '../src/components/Toast';
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -101,6 +102,7 @@ export default function RootLayout() {
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
         </Stack>
+        <ToastHost />
       </ThemeProvider>
     </SafeAreaProvider>
   );

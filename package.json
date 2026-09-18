@@ -7,7 +7,8 @@
     "web": "expo start --web",
     "build": "expo export --platform web",
     "export": "expo export --platform web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@expo-google-fonts/roboto-condensed": "^0.4.2",
@@ -31,7 +32,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^5.0.1"
   },
   "private": true
 }

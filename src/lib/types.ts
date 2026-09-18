@@ -45,6 +45,17 @@ export interface WorkoutLog {
   date: string;
 }
 
+// Optional feature groups, each with a Settings toggle so the app can
+// stay a plain 5/3/1 sheet when they're off.
+export interface FeatureFlags {
+  // AMRAP rep stepper on the top set + PR chips + e1RM trend.
+  amrap: boolean;
+  // Collapsible 40/50/60% warm-up rows above the working sets.
+  warmups: boolean;
+  // Last-logged line, one-tap TM bump, week-complete banner.
+  cycleHelper: boolean;
+}
+
 export interface AppSettings {
   unit: 'lb' | 'kg';
   repScheme: RepScheme;
@@ -52,6 +63,7 @@ export interface AppSettings {
   // Per-unit list of plates the user actually has at their gym. Defaults to
   // the full Olympic set; entries removed via the Settings → Plates section.
   availablePlates: { lb: number[]; kg: number[] };
+  features: FeatureFlags;
 }
 
 export type Unit = 'lb' | 'kg';
